@@ -1,7 +1,7 @@
 """
 GeoAlpha trading lifecycle model.
 
-- Generator: produces a new random number every 5s and notifies subscribers.
+- Generator: produces a new random number on an interval and notifies subscribers.
 - Strategy: subscribes to one or more Generators, computes a numeric decision
   from the latest values and notifies its subscribers when a new decision is made.
 - Trader: subscribes to Strategies, keeps the latest decision from each, computes
@@ -48,22 +48,6 @@ def trimmed_mean(values: List[float], trim_fraction: float = 0.1) -> float:
     sorted_vals = sorted(values)
     trimmed = sorted_vals[k : n - k]
     return sum(trimmed) / len(trimmed)
-
-
-def pick_decision_fn(method: Optional[str]) -> DecisionFn:
-    """Map a method name to a decision function. Defaults to arithmetic mean."""
-    if method is None or method == "mean":
-        return lambda vals: sum(vals) / len(vals)
-    if method == "median":
-        return lambda vals: statistics.median(vals)
-    if method == "geometric_mean":
-        return geometric_mean
-    if method == "trimmed_mean":
-        # default trim fraction 10%
-        return lambda vals: trimmed_mean(vals, 0.1)
-    # unknown method -> default mean
-    return lambda vals: sum(vals) / len(vals)
-
 
 class Generator:
     """
@@ -141,20 +125,15 @@ class Strategy:
     def __init__(
         self,
         strategy_id: str,
-        method: Optional[str] = None,
-        decision_fn: Optional[DecisionFn] = None,
+        method: str,
+        decision_fn: DecisionFn,
     ) -> None:
         self.id = strategy_id
         self._generator_unsub: Dict[str, Callable[[], None]] = {}
         self._latest_values: Dict[str, float] = {}
         self._subscribers: List[Subscriber] = []
-        if decision_fn is not None:
-            self._decision_fn: DecisionFn = decision_fn
-            self._method_name: str = getattr(decision_fn, "__name__", "custom")
-        else:
-            self._decision_fn = pick_decision_fn(method)
-            # remember method name for logging (fallback to "mean")
-            self._method_name: str = method or "mean"
+        self._decision_fn: DecisionFn = decision_fn
+        self._method_name: str = method
 
     def subscribe(self, fn: Subscriber) -> Callable[[], None]:
         self._subscribers.append(fn)
@@ -270,22 +249,24 @@ class Trader:
 # Demo / integration example
 async def main_demo() -> None:
 
-    print("Demo started. Generators emit every 5 seconds. Watch trader output.")
+    print("*** Demo started ***")
 
-    # Create generators
-    g1 = Generator("G1", interval=5.0)
-    g2 = Generator("G2", interval=5.0)
-    g3 = Generator("G3", interval=5.0)
+    print("*** Create Generators ***")
+    interval = 1.0 # would normally be higher (e.g., 5.0 seconds)
+    system_cycle = interval * 5
+    g1 = Generator("G1", interval)
+    g2 = Generator("G2", interval)
+    g3 = Generator("G3", interval)
 
-    # Start them
+    print("*** Start Generators ***")
     g1.start()
     g2.start()
     g3.start()
 
-    # Create strategies with different decision methods
-    sA = Strategy("S-A", method="mean")                 # arithmetic mean (default)
-    sB = Strategy("S-B", method="median")               # median
-    sC = Strategy("S-C", method="geometric_mean")       # geometric mean
+    print ("*** Create strategies with different decision methods ***")
+    sA = Strategy("S-A", method="mean", decision_fn=lambda vals: sum(vals) / len(vals))
+    sB = Strategy("S-B", method="median", decision_fn=statistics.median)
+    sC = Strategy("S-C", method="geometric_mean", decision_fn=geometric_mean)
     # Custom trimmed mean with 20% trim using a decision_fn
     sD = Strategy("S-D", method="trimmed_mean_20", decision_fn=lambda vals: trimmed_mean(vals, 0.2))
 
@@ -310,18 +291,18 @@ async def main_demo() -> None:
     trader.attach_strategy(sC)
     trader.attach_strategy(sD)
 
-    # Let system run for 25 seconds
-    await asyncio.sleep(25)
+    # Let system run for a few cycles
+    await asyncio.sleep(system_cycle)
 
     # Dynamically add a new strategy that listens to all generators (example using median)
-    sE = Strategy("S-E", method="median")
+    sE = Strategy("S-E", method="median", decision_fn=statistics.median)
     sE.attach_generator(g1)
     sE.attach_generator(g2)
     sE.attach_generator(g3)
     trader.attach_strategy(sE)
     print("Added strategy S-E (subscribes to G1,G2,G3)")
 
-    await asyncio.sleep(20)
+    await asyncio.sleep(system_cycle)
 
     # Stop one generator and remove one strategy to demonstrate resilience
     print("Shutting down generator G2 and removing strategy S-B")
@@ -329,7 +310,7 @@ async def main_demo() -> None:
     sB.shutdown()
     trader.detach_strategy(sB)
 
-    await asyncio.sleep(20)
+    await asyncio.sleep(system_cycle)
 
     # Clean shutdown
     print("Shutting down remaining components...")
@@ -340,7 +321,7 @@ async def main_demo() -> None:
     trader.shutdown()
     await g1.stop()
     await g3.stop()
-    print("Demo finished.")
+    print("*** Demo finished ***")
 
 
 if __name__ == "__main__":
