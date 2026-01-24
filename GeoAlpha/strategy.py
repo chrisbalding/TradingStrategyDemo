@@ -1,5 +1,7 @@
 from __future__ import annotations
 import asyncio
+import sys
+import traceback
 from typing import Callable, Dict, List
 
 # Try relative import for package usage, fall back to local import so the top-level
@@ -80,9 +82,14 @@ class Strategy:
         values = list(self._latest_values.values())
         try:
             decision = self._decision_fn(values)
-        except Exception:
-            # fallback to arithmetic mean if custom fn fails
-            decision = sum(values) / len(values)
+        except Exception as exc:
+            # Print debug information and exit, as requested
+            print(f"Strategy {self.id}: decision_fn raised an exception: {exc}", file=sys.stderr)
+            print(f"Decision function: {getattr(self._decision_fn, '__name__', repr(self._decision_fn))}", file=sys.stderr)
+            print(f"Input values: {values}", file=sys.stderr)
+            traceback.print_exc(file=sys.stderr)
+            sys.exit(1)
+
         for sub in list(self._subscribers):
             try:
                 maybe_coro = sub(self.id, decision, ts)

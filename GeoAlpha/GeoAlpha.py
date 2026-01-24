@@ -61,6 +61,50 @@ def trimmed_mean(values: List[float], trim_fraction: float = 0.1) -> float:
     return sum(trimmed) / len(trimmed)
 
 
+def max_seen() -> DecisionFn:
+    """
+    Factory that returns a decision function which tracks the largest value seen
+    across invocations. The returned callable accepts the current list of latest
+    values and returns the maximum observed so far.
+    """
+    max_value = float("-inf")
+
+    def _fn(values: List[float]) -> float:
+        nonlocal max_value
+        if not values:
+            return max_value
+        current_max = max(values)
+        if current_max > max_value:
+            max_value = current_max
+            print(f"New max seen: {max_value}")
+        return max_value
+
+    return _fn
+
+
+def trailing_stop_sell(stop_distance: float = 0.001) -> DecisionFn:
+    """
+    Factory that returns a decision function which maintains a trailing stop level 
+    at a stop_distance below the maximum observed value. If the current value
+    drops below the trailing stop, it signals a sell by returning the null value
+    """
+    trailing_stop = float("-inf")
+
+    def _fn(values: List[float]) -> float:
+        nonlocal trailing_stop
+        current_val = max(values)
+        if trailing_stop == float("-inf"):
+            trailing_stop = current_val - stop_distance
+        if current_val > trailing_stop + stop_distance:
+            trailing_stop = current_val - stop_distance
+        if current_val < trailing_stop:
+            print(f"Trailing stop hit: {trailing_stop}")
+            trailing_stop = float("-inf")
+        return trailing_stop
+
+    return _fn
+
+
 # Demo / integration example
 async def main_demo() -> None:
 
@@ -69,73 +113,84 @@ async def main_demo() -> None:
     print("*** Create Generators ***")
     interval = 1.0 # would normally be higher (e.g., 5.0 seconds)
     system_cycle = interval * 5
-    g1 = Generator("USDJPY", interval=interval, initial_price=155.69)
-    g2 = Generator("GBPUSD", interval=interval, initial_price=1.36)
-    g3 = Generator("EURUSD", interval=interval, initial_price=1.18)
+    gUsdJpy = Generator("USDJPY", interval=interval, initial_price=155.69)
+    gGbpUsd = Generator("GBPUSD", interval=interval, initial_price=1.36)
+    gEurUsd = Generator("EURUSD", interval=interval, initial_price=1.18)
 
     print("*** Start Generators ***")
-    g1.start()
-    g2.start()
-    g3.start()
+    gUsdJpy.start()
+    gGbpUsd.start()
+    gEurUsd.start()
 
     print ("*** Create strategies with different decision methods ***")
-    sA = Strategy("S-A", method="mean", decision_fn=lambda vals: sum(vals) / len(vals))
-    sB = Strategy("S-B", method="median", decision_fn=statistics.median)
-    sC = Strategy("S-C", method="geometric_mean", decision_fn=geometric_mean)
+    sMean = Strategy("sMean", method="mean", decision_fn=lambda vals: sum(vals) / len(vals))
+    sMedian = Strategy("sMedian", method="median", decision_fn=statistics.median)
+    sGeometric = Strategy("sGeometric", method="geometric_mean", decision_fn=geometric_mean)
     # Custom trimmed mean with 20% trim using a decision_fn
-    sD = Strategy("S-D", method="trimmed_mean_20", decision_fn=lambda vals: trimmed_mean(vals, 0.2))
+    sTrimmed = Strategy("sTrimmed", method="trimmed_mean_20", decision_fn=lambda vals: trimmed_mean(vals, 0.2))
+    # max seen strategy that holds some state
+    sMaxSeen = Strategy("sMaxSeen", method="max_seen", decision_fn=max_seen())
+    # trailing stop strategy
+    sTrailingStop = Strategy("sTrailingStop", method="trailing_stop_sell", decision_fn=trailing_stop_sell())
 
     # Attach generators to strategies
-    sA.attach_generator(g1)
-    sA.attach_generator(g2)
+    sMean.attach_generator(gUsdJpy)
+    sMean.attach_generator(gGbpUsd)
 
-    sB.attach_generator(g2)
-    sB.attach_generator(g3)
+    sMedian.attach_generator(gGbpUsd)
+    sMedian.attach_generator(gEurUsd)
 
-    sC.attach_generator(g1)
-    sC.attach_generator(g3)
+    sGeometric.attach_generator(gUsdJpy)
+    sGeometric.attach_generator(gEurUsd)
 
-    sD.attach_generator(g1)
-    sD.attach_generator(g2)
-    sD.attach_generator(g3)
+    sTrimmed.attach_generator(gUsdJpy)
+    sTrimmed.attach_generator(gGbpUsd)
+    sTrimmed.attach_generator(gEurUsd)
+
+    sMaxSeen.attach_generator(gUsdJpy)
+    sTrailingStop.attach_generator(gUsdJpy)
 
     # Create trader and attach strategies
     trader = Trader()
-    trader.attach_strategy(sA)
-    trader.attach_strategy(sB)
-    trader.attach_strategy(sC)
-    trader.attach_strategy(sD)
+    trader.attach_strategy(sMean)
+    trader.attach_strategy(sMedian)
+    trader.attach_strategy(sGeometric)
+    trader.attach_strategy(sTrimmed)
+    trader.attach_strategy(sMaxSeen)
+    trader.attach_strategy(sTrailingStop)
 
     # Let system run for a few cycles
     await asyncio.sleep(system_cycle)
 
     # Dynamically add a new strategy that listens to all generators (example using median)
-    sE = Strategy("S-E", method="median", decision_fn=statistics.median)
-    sE.attach_generator(g1)
-    sE.attach_generator(g2)
-    sE.attach_generator(g3)
-    trader.attach_strategy(sE)
+    sMedianAll = Strategy("S-E", method="median", decision_fn=statistics.median)
+    sMedianAll.attach_generator(gUsdJpy)
+    sMedianAll.attach_generator(gGbpUsd)
+    sMedianAll.attach_generator(gEurUsd)
+    trader.attach_strategy(sMedianAll)
     print("Added strategy S-E (subscribes to G1,G2,G3)")
 
     await asyncio.sleep(system_cycle)
 
     # Stop one generator and remove one strategy to demonstrate resilience
     print("Shutting down generator G2 and removing strategy S-B")
-    await g2.stop()
-    sB.shutdown()
-    trader.detach_strategy(sB)
+    await gGbpUsd.stop()
+    sMedian.shutdown()
+    trader.detach_strategy(sMedian)
 
     await asyncio.sleep(system_cycle)
 
     # Clean shutdown
     print("Shutting down remaining components...")
-    sA.shutdown()
-    sC.shutdown()
-    sD.shutdown()
-    sE.shutdown()
+    sMean.shutdown()
+    sGeometric.shutdown()
+    sTrimmed.shutdown()
+    sMedianAll.shutdown()
+    sMaxSeen.shutdown()
     trader.shutdown()
-    await g1.stop()
-    await g3.stop()
+    await gUsdJpy.stop()
+    await gEurUsd.stop()
+
     print("*** Demo finished ***")
 
 
