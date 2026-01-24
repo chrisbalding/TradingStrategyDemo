@@ -11,6 +11,9 @@
     <OutputPath>.</OutputPath>
     <Name>GeoAlpha</Name>
     <RootNamespace>GeoAlpha</RootNamespace>
+    <InterpreterId>
+    </InterpreterId>
+    <TestFramework>Pytest</TestFramework>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -24,8 +27,14 @@
     <Compile Include="generator.py" />
     <Compile Include="GeoAlpha.py" />
     <Compile Include="strategy.py" />
+    <Compile Include="tests\test_generator.py" />
+    <Compile Include="tests\test_strategy.py" />
+    <Compile Include="tests\test_trader.py" />
     <Compile Include="trader.py" />
     <Compile Include="__init__.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="tests\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
