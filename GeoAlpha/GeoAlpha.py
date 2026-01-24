@@ -69,9 +69,9 @@ async def main_demo() -> None:
     print("*** Create Generators ***")
     interval = 1.0 # would normally be higher (e.g., 5.0 seconds)
     system_cycle = interval * 5
-    g1 = Generator("G1", interval)
-    g2 = Generator("G2", interval)
-    g3 = Generator("G3", interval)
+    g1 = Generator("USDJPY", interval=interval, initial_price=155.69)
+    g2 = Generator("GBPUSD", interval=interval, initial_price=1.36)
+    g3 = Generator("EURUSD", interval=interval, initial_price=1.18)
 
     print("*** Start Generators ***")
     g1.start()
