@@ -27,6 +27,7 @@
     <Compile Include="generator.py" />
     <Compile Include="GeoAlpha.py" />
     <Compile Include="strategy.py" />
+    <Compile Include="tests\test_decision_functions.py" />
     <Compile Include="tests\test_generator.py" />
     <Compile Include="tests\test_strategy.py" />
     <Compile Include="tests\test_trader.py" />

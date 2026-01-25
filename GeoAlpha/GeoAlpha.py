@@ -1,7 +1,7 @@
 """
 GeoAlpha trading lifecycle model.
 
-- Generator: produces a new random number on an interval and notifies subscribers.
+- Generator: produces FX like prices on an interval and notifies subscribers.
 - Strategy: subscribes to one or more Generators, computes a numeric decision
   from the latest values and notifies its subscribers when a new decision is made.
 - Trader: subscribes to Strategies, keeps the latest decision from each, computes
@@ -94,10 +94,13 @@ def trailing_stop_sell(stop_distance: float = 0.001) -> DecisionFn:
         nonlocal trailing_stop
         current_val = max(values)
         if trailing_stop == float("-inf"):
+            # first call, initialize trailing stop
             trailing_stop = current_val - stop_distance
         if current_val > trailing_stop + stop_distance:
+            # update trailing stop upwards
             trailing_stop = current_val - stop_distance
         if current_val < trailing_stop:
+            # signal sell
             print(f"Trailing stop hit: {trailing_stop}")
             trailing_stop = float("-inf")
         return trailing_stop
@@ -111,7 +114,7 @@ async def main_demo() -> None:
     print("*** Demo started ***")
 
     print("*** Create Generators ***")
-    interval = 1.0 # would normally be higher (e.g., 5.0 seconds)
+    interval = 5.0 # set to something smaller when testing
     system_cycle = interval * 5
     gUsdJpy = Generator("USDJPY", interval=interval, initial_price=155.69)
     gGbpUsd = Generator("GBPUSD", interval=interval, initial_price=1.36)
