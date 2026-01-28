@@ -1,8 +1,8 @@
 """
-GeoAlpha package initializer.
+TradingStrategyDemo package initializer.
 
 Expose the primary public API so callers can do:
-    from GeoAlpha import Generator, Strategy, Trader
+    from TradingStrategyDemo import Generator, Strategy, Trader
 """
 from .generator import Generator
 from .strategy import Strategy

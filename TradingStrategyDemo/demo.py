@@ -1,5 +1,5 @@
 """
-GeoAlpha trading lifecycle model.
+TradingStrategyDemo trading lifecycle model.
 
 - Generator: produces FX like prices on an interval and notifies subscribers.
 - Strategy: subscribes to one or more Generators, computes a numeric decision

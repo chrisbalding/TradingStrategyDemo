@@ -4,13 +4,13 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>150465d2-2d29-4760-87e8-d9f6ae1eec46</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>GeoAlpha.py</StartupFile>
+    <StartupFile>demo.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
-    <Name>GeoAlpha</Name>
-    <RootNamespace>GeoAlpha</RootNamespace>
+    <Name>TradingStrategyDemo</Name>
+    <RootNamespace>TradingStrategyDemo</RootNamespace>
     <InterpreterId>
     </InterpreterId>
     <TestFramework>Pytest</TestFramework>
@@ -25,7 +25,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="generator.py" />
-    <Compile Include="GeoAlpha.py" />
+    <Compile Include="demo.py" />
     <Compile Include="strategy.py" />
     <Compile Include="tests\test_decision_functions.py" />
     <Compile Include="tests\test_generator.py" />

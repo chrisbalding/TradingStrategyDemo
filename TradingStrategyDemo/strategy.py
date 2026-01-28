@@ -5,7 +5,7 @@ import traceback
 from typing import Callable, Dict, List
 
 # Try relative import for package usage, fall back to local import so the top-level
-# script can still be executed directly (python GeoAlpha.py).
+# script can still be executed directly (python demo.py).
 try:
     from .generator import Generator
 except Exception:

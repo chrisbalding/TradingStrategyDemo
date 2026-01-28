@@ -4,7 +4,7 @@ import time
 from typing import Callable, Dict
 
 # Try relative import for package usage, fall back to local import so the top-level
-# script can still be executed directly (python GeoAlpha.py).
+# script can still be executed directly (python demo.py).
 try:
     from .strategy import Strategy
 except Exception:

@@ -2,7 +2,7 @@ import time
 import importlib
 import pytest
 
-from GeoAlpha import geometric_mean, trimmed_mean, max_seen, trailing_stop_sell
+from demo import geometric_mean, trimmed_mean, max_seen, trailing_stop_sell
 
 
 def test_max_seen_tracks_largest_value_across_calls():
